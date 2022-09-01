@@ -2,17 +2,38 @@
     <div class="relative flex flex-col gap-6">
       <form class="flex flex-col gap-4" @submit.prevent="handleSubmit">
         <div class="flex flex-col gap-2">
-          <label class="text-sm font-medium leading-5 text-blue-900" for="text">
-            Text
-          </label>
-          <input id="text" name="text" type="text" class="w-full px-4 py-2.5 rounded-lg"
-            placeholder="Write a text to hash" />
+          <Switch
+            @selected="setSelected"
+          />
+          <h1 class="text-xl pt-4 font-bold font-sans uppercase text-blue-900">
+            {{
+              selected === 'text' 
+              ? 'Escribe algo'
+              : 'Selecciona un archivo'
+            }}
+          </h1>
+          <input 
+            name="text"
+            :type="selected === 'text' ? 'text' : 'hidden'"
+            class="w-full px-4 py-2.5 rounded-lg border"
+            placeholder="Write a text to hash"
+            required
+          />
+          <input 
+            name="file"
+            :type="selected === 'file' ? 'file' : 'hidden'"
+            class="w-full file:px-4 file:py-2 cursor-pointer file:bg-blue-500 file:hover:bg-blue-700 file:text-white file:rounded-md file:border-0 file:transition-all file:duration-300 file:ease-in-out select-none p-2 bg-white rounded-lg"
+            required
+          />
         </div>
         <button
           type="submit"
           class="bg-blue-500 hover:bg-blue-700 text-white py-2.5 px-4 rounded-lg transition-colors duration-300 ease-in-out">Submit</button>
       </form>
-      <div class="relative overflow-y-scroll h-full">
+      <div class="relative overflow-y-scroll h-full flex flex-col gap-2">
+        <h1 class="text-xl pt-4 font-bold font-sans uppercase text-blue-900" :class="{hidden: hashes.length === 0}">
+            Resultados
+          </h1>
         <div class="flex flex-col gap-4">
           <button v-for="(hash, index) in hashes" :key="index"
             @click="copyToClipboard(hash?.Digest)"
@@ -43,31 +64,37 @@
 </template>
 
 <script>
-import { getHash } from '../queries/hash.js';
+import { getHash, getFileHash } from '../queries/hash.js';
+import Switch from './Switch.vue'
 
 export default {
   name: 'Hash',
+  components: {
+    Switch,
+  },
   data() {
     return {
       hashes: [],
       isCopied: false,
+      selected: 'text',
     }
   },
   methods: {
     async handleSubmit(e) {
-      const formData = new FormData(e.target);
-      const text = formData.get('text');
-      if (!text) {
-        this.hashes = [];
-        return;
-      }
+      e.target.reset();
       this.hashes = [];
+      const formData = new FormData(e.target);
       const hashTypes = ['md4', 'md5', 'sha1', 'sha256', 'sha512'];
+
       hashTypes.forEach(async (hashType) => {
-        const hash = await getHash(text, hashType);
+        if (this.selected === 'text') {
+          const hash = await getHash(formData.get('text'), hashType);
+          this.hashes.push(hash);
+          return;
+        }
+        const hash = await getFileHash(formData.get('file'), hashType);
         this.hashes.push(hash);
       });
-      console.log(this.hashes);
     },
     copyToClipboard(text) {
       const textArea = document.createElement('textarea');
@@ -81,6 +108,10 @@ export default {
         this.isCopied = false;
       }, 2000);
     },
+    setSelected(value) {
+      this.hashes = [];
+      this.selected = value;
+    }
   },
 }
 </script>
