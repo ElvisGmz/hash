@@ -10,3 +10,23 @@ export const getHash = async (value = '', type = 'md4') => {
     console.error(error);
   }
 };
+
+export const getFileHash = async (file, type = 'md4') => {
+  // if (!file) {
+  //   return;
+  // }
+  console.log(file)
+  try {
+    const response = await fetch(
+      `${BASE_URL}${type}/hex`,
+      {
+        method: 'POST',
+        body: file,
+        redirect: 'follow'
+      },
+    );
+    return await response.json();
+  } catch (error) {
+    console.error(error);
+  }
+};
